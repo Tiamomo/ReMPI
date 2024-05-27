@@ -53,10 +53,11 @@ _EXTERN_C_ void *MPIR_ToPointer(int);
 #if defined(MPI_STATUS_SIZE) && MPI_STATUS_SIZE > 0
 #define MPI_F_STATUS_SIZE MPI_STATUS_SIZE
 #else
+#define MPI_F_STATUS_SIZE 20*sizeof(char)
 //#define MPI_F_STATUS_SIZE sizeof(MPI_Status)
-_EXTERN_C_ void get_mpi_f_status_size___(int*);
-inline int __get_mpi_f_status_size(){int size; get_mpi_f_status_size___(&size); return size;}
-#define MPI_F_STATUS_SIZE __get_mpi_f_status_size()
+//_EXTERN_C_ void get_mpi_f_status_size___(int*);
+//inline int __get_mpi_f_status_size(){int size; get_mpi_f_status_size___(&size); return size;}
+//#define MPI_F_STATUS_SIZE __get_mpi_f_status_size()
 #endif
 
 #endif
@@ -793,6 +794,7 @@ _EXTERN_C_ void mpi_testall__(MPI_Fint *count, MPI_Fint array_of_requests[], MPI
 
 
 /* ================== C Wrappers for MPI_Wait ================== */
+
 _EXTERN_C_ int PMPI_Wait(MPI_Request *arg_1, MPI_Status *arg_2);
 _EXTERN_C_ int MPI_Wait(MPI_Request *arg_1, MPI_Status *arg_2) {
   REMPI_PREPRINT;
@@ -850,6 +852,7 @@ _EXTERN_C_ void mpi_wait__(MPI_Fint *request, MPI_Fint *status, MPI_Fint *ierr) 
 
 
 /* ================== C Wrappers for MPI_Waitany ================== */
+
 _EXTERN_C_ int PMPI_Waitany(int arg_0, MPI_Request *arg_1, int *arg_2, MPI_Status *arg_3);
 _EXTERN_C_ int MPI_Waitany(int arg_0, MPI_Request *arg_1, int *arg_2, MPI_Status *arg_3) {
   REMPI_PREPRINT;
@@ -919,6 +922,7 @@ _EXTERN_C_ void mpi_waitany__(MPI_Fint *count, MPI_Fint array_of_requests[], MPI
 
 
 /* ================== C Wrappers for MPI_Waitsome ================== */
+
 _EXTERN_C_ int PMPI_Waitsome(int arg_0, MPI_Request *arg_1, int *arg_2, int *arg_3, MPI_Status *arg_4);
 _EXTERN_C_ int MPI_Waitsome(int arg_0, MPI_Request *arg_1, int *arg_2, int *arg_3, MPI_Status *arg_4) {
   REMPI_PREPRINT;
@@ -1005,6 +1009,7 @@ _EXTERN_C_ int MPI_Waitall(int arg_0, MPI_Request *arg_1, MPI_Status *arg_2) {
     }
   }
 #else
+  //REMPI_DBG("============");
   _wrap_py_return_val = rempi_record_replay->re_waitall(arg_0, arg_1, arg_2);
 #endif
 

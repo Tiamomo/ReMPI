@@ -152,6 +152,7 @@ static void reomp_tgate_finalize_file()
 static void reomp_tgate_init_locks(size_t num_locks)
 {
   if (record_locks != NULL) return;
+  MUTIL_DBG("###reomp_tgate_init_locks-->num_locks:%zu",num_locks);
   record_locks = (omp_lock_t*)malloc(sizeof(omp_lock_t) * num_locks);
   for (int i = 0; i < num_locks; i++) {
     omp_init_lock(&record_locks[i]);
@@ -182,23 +183,31 @@ static void reomp_tgate_in(int control, void* ptr, size_t lock_id, int lock)
 {
   int tid;
   size_t ret;
-
+  //MUTIL_DBG("==0==reomp_tgate_in-mode1");
   tid = reomp_tgate_get_thread_num();
+  //MUTIL_DBG("===0===reomp_tgate_in: control: %d,tid: %d,current_tid: %d,lock_id: %zu",control,tid,current_tid,lock_id);
   if (tid == current_tid) {
     nest_num++;
+    //MUTIL_DBG("===0-1===reomp_tgate_in: control: %d,tid: %d,current_tid: %d,lock_id: %zu,nest_num: %d",control,tid,current_tid,lock_id,nest_num);
     return;
   }
   
   if (reomp_config.mode == REOMP_ENV_MODE_RECORD) {
-    //    if (tid == time_tid) tmp_time = reomp_util_get_time();
+
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_START, REOMP_TIMER_GATE_TIME, NULL);
     //if(lock == REOMP_WITH_LOCK) omp_set_nest_lock(&record_locks[lock_id]);
-    //    MUTIL_DBG("set lock_id: %d", &record_locks[lock_id]);
+   int isLockReleased=omp_test_lock(&record_locks[lock_id]);
+   //MUTIL_DBG("S###==1==reomp_tgate_in: control: %d,tid: %d,lock_id: %zu,isLockReleased: %d", control,tid, lock_id,isLockReleased);
+   if (isLockReleased) {
+    omp_unset_lock(&record_locks[lock_id]);
+   }
     omp_set_lock(&record_locks[lock_id]);
-//    if (tid == time_tid) lock_time += reomp_util_get_time() - tmp_time;
+   //MUTIL_DBG("###==1==reomp_tgate_in: control: %d,tid: %d ,lock_id: %zu,isLockReleased: %d ###E", control, tid, lock_id,isLockReleased);
+
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_STOP, REOMP_TIMER_GATE_TIME, NULL);
-  } else {
-    //    MUTIL_DBG("  (tid: %d)", tid);    
+  } 
+  else {    
+    //MUTIL_DBG("==1==reomp_tgate_in-mode1");
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_START, REOMP_TIMER_GATE_TIME, NULL);
     while (tid != replay_thread_num) {
       if(omp_test_lock(&file_read_mutex_lock) != 0) {
@@ -212,11 +221,13 @@ static void reomp_tgate_in(int control, void* ptr, size_t lock_id, int lock)
       }
     }
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_STOP, REOMP_TIMER_GATE_TIME, NULL);
+    //MUTIL_DBG("==2==reomp_tgate_in-mode1");
   }
 #ifdef ENABLE_MEM_SYNC
   __sync_synchronize();
 #endif
   current_tid = tid;
+  //MUTIL_DBG("===2===reomp_tgate_in: control: %d,tid: %d,current_tid: %d,nest_num: %d",control,tid,current_tid,nest_num);
   //  MUTIL_DBG("Gate-In: tid: %d: lock: %d, replay_thread_num: %d", tid, lock, replay_thread_num);
   //reomp_util_btrace();
   return;
@@ -227,52 +238,57 @@ static void reomp_tgate_out(int control, void* ptr, size_t lock_id, int lock)
 {
   int tid;
   size_t ret;
-
-  //  if(omp_get_num_threads() == 1) return;
-
+  tid = reomp_tgate_get_thread_num();
+  //MUTIL_DBG("==0==reomp_tgate_out-mode1");
+  //MUTIL_DBG("===0===reomp_tgate_out: control: %d,tid: %d,current_tid: %d,lock_id: %zu,nest_num: %d",control,tid,current_tid,lock_id,nest_num); 
   if (nest_num) {
     nest_num--;
+    //MUTIL_DBG("==1-0==:reomp_tgate_out_nest_num: control: %d,tid: %d,current_tid: %d,lock_id: %zu,nest_num: %d", control,tid ,current_tid,lock_id,nest_num);
     return;
   }
-  
+  //MUTIL_DBG("==1==reomp_tgate_out: control: %d,tid: %d,current_tid: %d,lock_id: %zu", control,tid,current_tid ,lock_id);
   current_tid = -1;
 
 #ifdef ENABLE_MEM_SYNC
   __sync_synchronize();
 #endif
 
-  tid = reomp_tgate_get_thread_num();
-  //  MUTIL_DBG("Gate-Out: tid: %d: lock: %d, replay_thread_num: %d", tid, lock, replay_thread_num);
+  //tid = reomp_tgate_get_thread_num();
   if (reomp_config.mode == REOMP_ENV_MODE_RECORD) {
-    //    MUTIL_DBG("unlock: %d", tid);
-    //    write(fp, &tid, sizeof(int));
 #ifndef REOMP_SKIP_RECORD
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_START, REOMP_TIMER_IO_TIME, NULL);
     ret = fwrite(&tid, sizeof(int), 1, fp);
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_STOP, REOMP_TIMER_IO_TIME, NULL);
     if (ret != 1) MUTIL_ERR("fwrite failed");
 #endif
-    //    if (tid == time_tid) tmp_time = reomp_util_get_time();
+
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_START, REOMP_TIMER_GATE_TIME, NULL);
-    //if(lock == REOMP_WITH_LOCK) omp_unset_nest_lock(&record_locks[lock_id]);
-    //    MUTIL_DBG("lock_id: %d", &record_locks[lock_id]);
+    
+    //MUTIL_DBG("S==2==reomp_tgate_out_unset: control:%d,tid: %d,current_tid: %d,lock_id: %zu", control, tid,current_tid ,lock_id);
     omp_unset_lock(&record_locks[lock_id]);
-    //    if (tid == time_tid) lock_time += reomp_util_get_time() - tmp_time;
+    //MUTIL_DBG("==2==reomp_tgate_out_unset: control:%d,tid: %d,current_tid: %d,lock_id: %zu!!!E", control, tid,current_tid, lock_id);
+    
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_STOP, REOMP_TIMER_GATE_TIME, NULL);
-  } else {
+    
+  } 
+  else {
     //    MUTIL_DBG("tid: %d: end: %d (unlock: %d)", tid, replay_thread_num, lock);
     //    fprintf(stderr, "%d\n", tid);
     //    MUTIL_DBGI(1, "tid: %d", tid);
     //    if (tid != replay_thread_num) {
       //      MUTIL_ERR("tid: %d: end: %d", tid, replay_thread_num);
     //    }
+  
     replay_thread_num = -1;
     //    pthread_mutex_unlock(&file_read_mutex);
     //    if (tid == time_tid) tmp_time = reomp_util_get_time();
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_START, REOMP_TIMER_GATE_TIME, NULL);
+    //MUTIL_DBG("==1==reomp_tgate_out-mode1- > control: %d,tid: %d,current_tid: %d,lock_id: %zu", control, tid, current_tid, lock_id);
     omp_unset_lock(&file_read_mutex_lock);
+    //MUTIL_DBG("==2==reomp_tgate_out-mode1- > control: %d,tid: %d,current_tid: %d,lock_id: %zu", control, tid, current_tid, lock_id);
     //    if (tid == time_tid) lock_time += reomp_util_get_time() - tmp_time;
     if (tid == time_tid) MUTIL_TIMER(MUTIL_TIMER_STOP, REOMP_TIMER_GATE_TIME, NULL);
+    
   }
   return;
 }

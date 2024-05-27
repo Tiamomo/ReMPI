@@ -23,7 +23,7 @@ void reomp_drace_parse(reomp_drace_log_type type);
 access);
 int reomp_drace_is_in_racy_callstack(const char* func_name);
 size_t reomp_drace_get_num_locks();
-
+int max_of_lock_id();
 
 #ifdef __cplusplus
 }

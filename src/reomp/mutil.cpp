@@ -495,6 +495,17 @@ int MUTIL_FUNC(str_starts_with)(const char* base, const char* str)
   return 1;
 }
 
+int MUTIL_FUNC(str_ends_with)(const char* str, const char* suffix)
+{
+    int str_length = strlen(str);
+    int suffix_length = strlen(suffix);
+
+    if (str_length >= suffix_length && strcmp(str + str_length - suffix_length, suffix) == 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
 #if 0
 

@@ -473,8 +473,17 @@ int *rempi_cp_get_pred_ranks(size_t *length)
   *length = rempi_pred_rank_count;
   return rempi_pred_ranks;
 }
+#else
 
+int *rempi_cp_get_pred_ranks(size_t *length)
+{
+return 0;
+}
 
+void rempi_cp_record_recv(int source_rank, size_t clock)
+{
+  return;
+}
 
 #endif
 

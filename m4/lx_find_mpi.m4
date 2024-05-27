@@ -132,7 +132,8 @@ AC_DEFUN([LX_QUERY_MPI_COMPILER],
      if [[ ! -z "$lx_mpi_command_line" ]]; then
          # Now extract the different parts of the MPI command line.  Do these separately in case we need to 
          # parse them all out in future versions of this macro.
-         lx_mpi_defines=`    echo "$lx_mpi_command_line" | grep -o -- '\(^\| \)-D\([[^\"[:space:]]]\+\|\"[[^\"[:space:]]]\+\"\)'`
+         lx_mpi_defines=`echo "$lx_mpi_command_line" | grep -o -- '\(^\| \)-D\([[^\"[:space:]]]\+\|\"[[^\"[:space:]]]\+\"\)' | grep -v DPIC`
+         #lx_mpi_defines=`    echo "$lx_mpi_command_line" | grep -o -- '\(^\| \)-D\([[^\"[:space:]]]\+\|\"[[^\"[:space:]]]\+\"\)'`
          lx_mpi_includes=`   echo "$lx_mpi_command_line" | grep -o -- '\(^\| \)-I\([[^\"[:space:]]]\+\|\"[[^\"[:space:]]]\+\"\)'`
          lx_mpi_link_paths=` echo "$lx_mpi_command_line" | grep -o -- '\(^\| \)-L\([[^\"[:space:]]]\+\|\"[[^\"[:space:]]]\+\"\)'`
          lx_mpi_libs=`       echo "$lx_mpi_command_line" | grep -o -- '\(^\| \)-l\([[^\"[:space:]]]\+\|\"[[^\"[:space:]]]\+\"\)'`
@@ -141,8 +142,8 @@ AC_DEFUN([LX_QUERY_MPI_COMPILER],
          # Create variables and clean up newlines and multiple spaces
          MPI_$3FLAGS="$lx_mpi_defines $lx_mpi_includes"
          MPI_$3LDFLAGS="$lx_mpi_link_paths $lx_mpi_libs $lx_mpi_link_args"
-         MPI_$3FLAGS=`  echo "$MPI_$3FLAGS"   | tr '\n' ' ' | sed 's/^[[ \t]]*//;s/[[ \t]]*$//' | sed 's/  */ /g'`
-         MPI_$3LDFLAGS=`echo "$MPI_$3LDFLAGS" | tr '\n' ' ' | sed 's/^[[ \t]]*//;s/[[ \t]]*$//' | sed 's/  */ /g'`
+         MPI_$3FLAGS=`  echo "$MPI_$3FLAGS"   | tr '\n' ' ' | sed 's/^[[ \t]]*//;s/[[ \t]]*$//' | sed 's/  */ /g'| sed 's/-DPIC//' `
+         MPI_$3LDFLAGS=`echo "$MPI_$3LDFLAGS" | tr '\n' ' ' | sed 's/^[[ \t]]*//;s/[[ \t]]*$//' | sed 's/  */ /g'| sed 's/-DPIC//' `
 
          # Add a define for testing at compile time.
          AC_DEFINE([HAVE_MPI], [1], [Define to 1 if you have MPI libs and headers.])
