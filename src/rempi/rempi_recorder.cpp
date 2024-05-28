@@ -276,15 +276,22 @@ int rempi_recorder::record_irecv(
 
   ret = PMPI_Irecv(buf, count, datatype, source, tag, comm, request);
   rempi_reqmg_register_request(buf, count, datatype, source, tag, comm, request, REMPI_RECV_REQUEST, &matching_set_id);
-
-
+/*
+  if (request_to_recv_event_umap.find(*request) != request_to_recv_event_umap.end()){
+     return ret;
+  }else{
+  e = rempi_event::create_recv_event(MPI_ANY_SOURCE, tag, NULL, request);
+   recording_event_list->push(e);
+   request_to_recv_event_umap[*request] = e;
+  
+  }
+  */
   e = rempi_event::create_recv_event(MPI_ANY_SOURCE, tag, NULL, request);
   recording_event_list->push(e);
   if (request_to_recv_event_umap.find(*request) != request_to_recv_event_umap.end()) {
     REMPI_ERR("Recv event of request(%p) already exists", *request);
   }
   request_to_recv_event_umap[*request] = e;
-
   return ret;
 }
 
@@ -386,12 +393,13 @@ int rempi_recorder::record_cancel(MPI_Request *request)
   rempi_reqmg_get_request_type(request, &request_type);
   if (request_type == REMPI_RECV_REQUEST ||
       request_type == REMPI_SEND_REQUEST) {
-    rempi_reqmg_deregister_request(request, request_type);
+    //REMPI_DBG("###record_cancel,request_type:%d\n", request_type);
+	  rempi_reqmg_deregister_request(request, request_type);
   }
 
   request_to_recv_event_umap.at(*request)->set_rank(REMPI_MPI_EVENT_RANK_CANCELED);
   if (request_to_recv_event_umap.erase(*request) == 0) {
-    REMPI_ERR("Recv event of request(%p) does not exist", *request);
+    //REMPI_ERR("Recv event of request(%p) does not exist", *request);
   }
   ret = PMPI_Cancel(request);
 
@@ -429,6 +437,7 @@ void rempi_recorder::cancel_request(MPI_Request *request)
   int request_type;
   
   rempi_reqmg_get_request_type(request, &request_type);
+  //REMPI_DBG("###cancel_request,request_type:%d\n", request_type);
   rempi_reqmg_deregister_request(request, request_type);
 
   /*
@@ -546,9 +555,16 @@ int rempi_recorder::record_mf(
        incount == 0 => it's deterministic 
        incount == nullcount => it's deterministic
     */
+    
     for (int i = 0; i < matched_count; i++) {
+     // if(matched_count>1){
+     // REMPI_DBG("curent i:%d\n",i);
+     // }
+      
       matched_index = (array_of_indices==NULL)? i:array_of_indices[i];
+      //REMPI_DBG("S===recorder L556=========\n");
       rempi_reqmg_deregister_request(&tmp_requests[matched_index], request_info[matched_index]);
+      //REMPI_DBG("S===recorder L556=========E\n");
       request_to_recv_event_umap.erase(tmp_requests[matched_index]);
     }
 #ifdef REMPI_DBG_REPLAY
@@ -605,15 +621,19 @@ int rempi_recorder::record_mf(
 
 
       if (i == matched_count - 1) {
-	is_with_next = REMPI_MPI_EVENT_NOT_WITH_NEXT;
+	    is_with_next = REMPI_MPI_EVENT_NOT_WITH_NEXT;
       }
 
       if (request_info[matched_index] == REMPI_SEND_REQUEST) {
-	rank = tmp_statuses[matched_index].MPI_SOURCE;
-	rempi_reqmg_deregister_request(&tmp_requests[matched_index], REMPI_SEND_REQUEST);
-	if (msg_id != NULL) msg_id[i] = REMPI_MPI_EVENT_INPUT_IGNORE; /*To distingisu between send or recv event in encoder_cdc */
-      } else if (request_info[matched_index] == REMPI_RECV_REQUEST) {
-	rank = array_of_statuses[i].MPI_SOURCE;
+	        rank = tmp_statuses[matched_index].MPI_SOURCE;
+	        //REMPI_DBG("S===recorder L623=========,matching_function_type:%d,matched_count:%d,matched_index:%d,incount:%d\n",matching_function_type,matched_count,matched_index,incount); 
+		//REMPI_DBG("current Request: %p \n", tmp_requests[matched_index])
+		rempi_reqmg_deregister_request(&tmp_requests[matched_index], REMPI_SEND_REQUEST);
+	        //REMPI_DBG("===recorder L623=========E,matching_function_type:%d,matched_count:%d,matched_index:%d,incount:%d\n",matching_function_type,matched_count,matched_index,incount);
+		if (msg_id != NULL) msg_id[i] = REMPI_MPI_EVENT_INPUT_IGNORE; /*To distingisu between send or recv event in encoder_cdc */
+      } 
+      else if (request_info[matched_index] == REMPI_RECV_REQUEST) {
+	    rank = array_of_statuses[i].MPI_SOURCE;
 	{
 	  rempi_reqmg_recv_args *recv_args;
 	  int datatype_size, count;
@@ -621,15 +641,19 @@ int rempi_recorder::record_mf(
 	  PMPI_Type_size(recv_args->datatype, &datatype_size);
 	  PMPI_Get_count(&array_of_statuses[i], recv_args->datatype, &count);
 	}
-	rempi_reqmg_report_message_matching(&tmp_requests[matched_index], &array_of_statuses[i]);
-	rempi_reqmg_deregister_request(&tmp_requests[matched_index], REMPI_RECV_REQUEST);
-	request_to_recv_event_umap.at(tmp_requests[matched_index])->set_rank(rank);
-	request_to_recv_event_umap.erase(tmp_requests[matched_index]);
-      } else if (request_info[matched_index] == REMPI_NULL_REQUEST) {
-	/*if request is MPI_REQUEST_NULL, it matches */
-	rank = array_of_statuses[i].MPI_SOURCE;
-      } else {
-	REMPI_ERR("unsupported MPI call");
+	  rempi_reqmg_report_message_matching(&tmp_requests[matched_index], &array_of_statuses[i]);
+	 //REMPI_DBG("S===recorder L638=========\n");
+	  rempi_reqmg_deregister_request(&tmp_requests[matched_index], REMPI_RECV_REQUEST);
+	 //REMPI_DBG("===recorder L638=========E\n"); 
+	  request_to_recv_event_umap.at(tmp_requests[matched_index])->set_rank(rank);
+	  request_to_recv_event_umap.erase(tmp_requests[matched_index]);
+      } 
+    else if (request_info[matched_index] == REMPI_NULL_REQUEST) {
+	    /*if request is MPI_REQUEST_NULL, it matches */
+	    rank = array_of_statuses[i].MPI_SOURCE;
+      } 
+    else {
+	        //REMPI_ERR("unsupported MPI call");
       }
 
       //      if (rank >= 0) {
@@ -877,8 +901,9 @@ int rempi_recorder::record_pf(int source,
   /*TODO: Interface for NULL request. For now, use dummy_req*/
   rempi_reqmg_register_request(NULL, 0, MPI_BYTE, source, tag, comm, &dummy_req, REMPI_RECV_REQUEST, &global_test_id);
   //  global_test_id = rempi_reqmg_get_test_id(&dummy_req, 1);
+  //REMPI_DBG("S===recorder L897=========\n");
   rempi_reqmg_deregister_request(&dummy_req, REMPI_RECV_REQUEST);
-
+  //REMPI_DBG("===recorder L897=========E\n");
   /* Call MPI matching function */
   ret = this->rempi_pf(source, tag, comm, flag, status, &msg_id, probe_function_type);
 
@@ -970,8 +995,12 @@ int rempi_recorder::replay_mf_input(
 	print_event_vec(replaying_event_vec);
 	REMPI_ASSERT(0);
       }
+    //  REMPI_DBG("S===recorder L991=========\n");
       rempi_reqmg_deregister_request(&array_of_requests[index], REMPI_SEND_REQUEST);      
+     // REMPI_DBG("===recorder L991=========E\n");
+    //REMPI_DBG("S===recorder L1001=========\n");
       PMPI_Wait(&array_of_requests[index], &array_of_statuses[local_outcount]);
+    //REMPI_DBG("===recorder L1001=========E\n");
     } else if (request_info[index] == REMPI_RECV_REQUEST) {
 
       int requested_source, requested_tag;
@@ -980,8 +1009,12 @@ int rempi_recorder::replay_mf_input(
 
 
       rempi_reqmg_get_matching_id(&array_of_requests[index], &requested_source, &requested_tag, &requested_comm);
+      //REMPI_DBG("S===recorder L1003=========\n");
       rempi_reqmg_deregister_request(&array_of_requests[index], REMPI_RECV_REQUEST);
+     // REMPI_DBG("===recorder L1003=========E\n");
+     // REMPI_DBG("S===recorder L1013=========,matching_function_type:%d\n",matching_function_type);
       PMPI_Wait(&array_of_requests[index], &status);
+     // REMPI_DBG("=matching_function_type:%d ==recorder L1013=========E\n",matching_function_type);
       if ((requested_source != MPI_ANY_SOURCE && requested_source != status.MPI_SOURCE) ||
 	  (requested_tag    != MPI_ANY_TAG    && requested_tag    != status.MPI_TAG)  ) {
 	REMPI_ERR("Replaying recv event from rank %d, but src of this recv request is rank %d: request: %p, index: %d", 
@@ -994,7 +1027,9 @@ int rempi_recorder::replay_mf_input(
 
 
     } else if (request_info[index] == REMPI_NULL_REQUEST) {
+      //REMPI_DBG("S===recorder L1026=========\n");
       PMPI_Wait(&array_of_requests[index], &status);
+      //REMPI_DBG("===recorder L1026=========E\n");
       array_of_statuses[local_outcount] = status;
       //      REMPI_ERR("MPI_REQUEST_NULL does not match any message: %d", request_info[index]);
     } else {

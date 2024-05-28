@@ -217,6 +217,9 @@ int rempi_re::re_irecv(
   if (rempi_mode == REMPI_ENV_REMPI_MODE_RECORD) {
     // ret = PMPI_Irecv(buf, count, datatype, source, tag, comm, request);
     // rempi_reqmg_register_recv_request(request, source, tag, (int)comm_id[0]);
+    MPI_Status status;
+    size_t status_size = sizeof(MPI_Status);
+   // REMPI_DBG("===sizeof(MPI_Status): %d", status_size);
     ret = recorder->record_irecv(buf, count, datatype, source, tag, 0, comm, request);
   } else {
     /*TODO: Really need datatype ??*/
@@ -489,6 +492,7 @@ int rempi_re::re_request_free(MPI_Request *request)
     rempi_reqmg_get_request_type(request, &request_type);
     if (request_type == REMPI_RECV_REQUEST ||
 	request_type == REMPI_SEND_REQUEST) {
+      REMPI_DBG("####re_request_free,request_type:%d\n", request_type);
       rempi_reqmg_deregister_request(request, request_type);
     }
     ret = PMPI_Request_free(request);

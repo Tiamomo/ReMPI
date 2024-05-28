@@ -68,6 +68,7 @@ static void reomp_profile_epoch_init()
 
 static void reomp_profile_io_init()
 {
+  //MUTIL_PRT("######Enter reomp_profile_io_init.######");
   struct stat st;
   sprintf(reomp_prof_io.path, REOMP_PATH_FORMAT, reomp_config.record_dir, 0, 0);
   stat(reomp_prof_io.path, &st);

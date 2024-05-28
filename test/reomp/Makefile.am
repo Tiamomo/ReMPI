@@ -17,7 +17,7 @@ reomp_test_units_without_reomp_CXXFLAGS = $(reomp_test_units_without_reomp_CFLAG
 reomp_test_units_without_reomp_LDFLAGS = -fopenmp -L./ `llvm-config --ldflags` -L../../src/reomp/.libs/ -lreomp $(CALIPER)
 
 reomp_test_units_with_reomp_SOURCES  = reomp_test_units.cpp ../common/rempi_test_util.c
-reomp_test_units_with_reomp_CPPFLAGS = -Xclang -load -Xclang $(REOMP_LLVM_IR_PASS)
+reomp_test_units_with_reomp_CPPFLAGS =  -load  $(REOMP_LLVM_IR_PASS)
 reomp_test_units_with_reomp_CFLAGS   = $(reomp_test_units_without_reomp_CFLAGS)
 reomp_test_units_with_reomp_CXXFLAGS = $(reomp_test_units_with_reomp_CFLAGS) -std=c++11 
 reomp_test_units_with_reomp_LDFLAGS  = $(reomp_test_units_without_reomp_LDFLAGS) 

@@ -119,7 +119,7 @@ public:
   };
 
   void print() {
-    MUTIL_DBG("%d %d %s %d %d <%s, %s>", hash_val, level, file_path, loc, column, addr, name);
+    //MUTIL_DBG("%d %d %s %d %d <%s, %s>", hash_val, level, file_path, loc, column, addr, name);
     //    MUTIL_DBG("%d %d %s %d %d <%s, %s> (is_valid: %d, is_stl: %d)", hash_val, level, file_path, loc, column, addr, name, is_valid, is_stl);
   }
 };
@@ -209,13 +209,13 @@ public:
 	/* Do not record */
 	/* TODO: free element */
 	call_stack_list[sindex].clear();
-	MUTIL_DBG("  ===> Stack %d is filtered out: (write(%d)/read(%d): %d, parallel(%d)/serial(%d): %d)", 
+	/*MUTIL_DBG("  ===> Stack %d is filtered out: (write(%d)/read(%d): %d, parallel(%d)/serial(%d): %d)", 
 		  sindex, 
 		  DRACE_WRITE_RACE, DRACE_READ_RACE, data_race_rw[sindex], 
-		  DRACE_PARALLEL, DRACE_SERIAL, parallel_or_serial[sindex]);
+		  DRACE_PARALLEL, DRACE_SERIAL, parallel_or_serial[sindex]);*/
       }
     }
-    fprintf(stderr, "\n\n");
+    //fprintf(stderr, "\n\n");
   }
 
   void compute_hash_val() {
@@ -255,9 +255,9 @@ public:
 
   void print() {
     list<call_func*>::iterator it, it_end;
-    MUTIL_DBG("## hash val: %d ##", this->hash_val);
+    //MUTIL_DBG("## hash val: %d ##", this->hash_val);
     for (int sindex = 0; sindex < 2; sindex++) {
-      MUTIL_DBG("=== Stack %d (write(%d)/read(%d): %d) ===", sindex, DRACE_WRITE_RACE, DRACE_READ_RACE, data_race_rw[sindex]);
+      //MUTIL_DBG("=== Stack %d (write(%d)/read(%d): %d) ===", sindex, DRACE_WRITE_RACE, DRACE_READ_RACE, data_race_rw[sindex]);
       for (it = call_stack_list[sindex].begin(), it_end = call_stack_list[sindex].end();
            it != it_end; it++) {
         call_func *cfunc;
@@ -314,7 +314,7 @@ static call_func* drace_extract_call_func(char* line, ssize_t line_length)
   int index_start, index_end;
   int length;
   
-  //  MUTIL_DBG("%s", line);
+ // MUTIL_DBG("@@@@@@line: %s", line);
 
   while(line[index++] != '#');
 
@@ -353,6 +353,7 @@ static call_func* drace_extract_call_func(char* line, ssize_t line_length)
     index = index_end;
   }
   length = index - index_start;
+  //MUTIL_DBG("@@@length : %d ", length);
   file_path = (char*)reomp_util_malloc(length + 1);
   strncpy(file_path, &line[index_start], length);
   file_path[length] = '\0';
@@ -499,9 +500,14 @@ static void drace_set_callstack(data_race *drace, FILE *fd, int index)
     if (cfunc == call_func::get_null_call_func()) {    
       drace->parallel_or_serial[index] = drace->data_race_rw[index] = DRACE_NULL;
     } else {
+      //MUTIL_DBG("@@@@@@current func : %s, cmp: %d",cfunc->name,reomp_util_str_ends_with(cfunc->name, "._omp_fn.0 "));
       if (reomp_util_str_starts_with(cfunc->name, ".omp_outlined.")) {
 	drace->parallel_or_serial[index] = DRACE_PARALLEL;
-      } 
+      }
+      /*if (reomp_util_str_ends_with(cfunc->name, "._omp_fn.0 ")) {
+              
+	      drace->parallel_or_serial[index] = DRACE_PARALLEL;
+      } */
     }
     drace->call_stack_list[index].push_back(cfunc);
   }
@@ -672,7 +678,15 @@ size_t reomp_drace_get_num_locks()
 {
   return num_locks;
 }
-
+int max_of_lock_id() {
+    int max_value = 0; 
+    for (const auto& pair : drace_data_race_lock_set_id) {
+        if (pair.second > max_value) {
+            max_value = pair.second; 
+        }
+    }
+    return max_value;
+}
 static void  reomp_parse_archer_post_process()
 {
   unordered_map<size_t, data_race*>::iterator it, it_end;
@@ -805,22 +819,26 @@ int  reomp_drace_is_data_race(const char* func, const char* dir, const char* fil
 
 
   hash_val = call_func::cf_hash(func, file_path_real, line, column, NULL);
-
+  //MUTIL_DBG("############ it's hashval: %d #############", hash_val);
 
   if (drace_data_race_access_umap.find(hash_val) != drace_data_race_access_umap.end()) {
+    
+    //MUTIL_DBG("########This hashval is valid.#########");
     int lock_set_id;
     call_func *cfunc;
 
     lock_set_id = drace_data_race_lock_set_id.at(hash_val);
     cfunc       = drace_data_race_access_umap.at(hash_val);
     
-    MUTIL_DBG("############ HIT: %d #############", hash_val);
-    MUTIL_DBG(" Line of instrumented code: %s:%d:%d (lock_set: %d)", file_path_real, line, column, lock_set_id);
-    cfunc->print();
-    MUTIL_DBG("##############################");
+    //MUTIL_DBG("############ HIT: %d #############", hash_val);
+    //MUTIL_DBG(" Line of instrumented code: %s:%d:%d (lock_set: %d)", file_path_real, line, column, lock_set_id);
+    //cfunc->print();
+    //MUTIL_DBG("##############################");
     
     return lock_set_id;
-  } 
+  }else{
+       //MUTIL_DBG("#######This hashval has entered drace_data_race_access_umap.end");
+  }
   if (file_path != NULL) {
     reomp_util_free(file_path);
   }

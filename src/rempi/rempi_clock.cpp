@@ -131,5 +131,7 @@ int rempi_clock_get_local_clock(size_t* clock)
 {
    return 0;
 }
-
+int rempi_clock_register_recv_clocks(size_t *clocks, int length){
+return 0;
+}
 #endif

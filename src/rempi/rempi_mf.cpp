@@ -90,7 +90,7 @@ int rempi_mpi_mf(int incount,
     return PMPI_Testall(incount, array_of_requests, outcount, array_of_statuses);
     break;
   case REMPI_MPI_WAIT:
-    //    REMPI_DBG("Wait(rempi_mpi_mf): request: %p, status: %p", array_of_requests[0], array_of_statuses[0]);
+       //REMPI_DBG("Wait(rempi_mpi_mf): request: %p, status: %p", array_of_requests[0], array_of_statuses[0]);
     return PMPI_Wait(array_of_requests, array_of_statuses);
     break;
   case REMPI_MPI_WAITANY:

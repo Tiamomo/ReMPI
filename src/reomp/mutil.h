@@ -106,7 +106,7 @@ int MUTIL_FUNC(init_rand)(int seed);
 int MUTIL_FUNC(init_ndrand)();
 int MUTIL_FUNC(get_rand)(int max);
 int MUTIL_FUNC(str_starts_with)(const char* base, const char* str);
-
+int MUTIL_FUNC(str_ends_with)(const char* str, const char* suffix);
 size_t Backtrace(void **frames, size_t size);
 void PrintBacktrace(void);
 

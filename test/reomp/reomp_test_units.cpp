@@ -45,7 +45,7 @@ static double num_loops_scale = 1;
 
 reomp_test_t reomp_test_cases[] =
   {
-    {(char*)"omp_critical", reomp_test_omp_critical,   {0, 0,    3000000L}},
+    {(char*)"omp_critical", reomp_test_omp_critical,   {0, 0,    30000000L}},
     {(char*)"omp_atomic", reomp_test_omp_atomic,       {0, 0,   30000000L}},
     {(char*)"data_race", reomp_test_data_race,         {0, 0,   30000000L}},
     {(char*)"omp_reduction", reomp_test_omp_reduction, {0, 0,  300000000L}},
@@ -76,7 +76,8 @@ static int reomp_test_omp_reduction(reomp_input_t *input)
   //  uint64_t num_loops = omp_get_num_threads()  * num_loops_scale;
 #pragma omp parallel for private(i) reduction(+: sum)
   for (i = 0; i < num_loops; i++) {
-    sum += 1;
+    //sum = sum * omp_get_thread_num() + 1;
+   sum += 1;
   }
   return sum;
 }

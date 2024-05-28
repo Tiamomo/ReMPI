@@ -14,8 +14,8 @@
 extern "C" {
 #endif
 
-#define xstr(s) str(s)
-#define str(s) #s
+#define xstr(s) str1(s)
+#define str1(s) #s
 
 void reomp_rr(void* ptr, size_t size);
 void logop(int i);
@@ -23,6 +23,11 @@ void logop(int i);
 #define REOMP_CONTROL reomp_control
 #define REOMP_CONTROL_STR xstr(REOMP_CONTROL)
 void REOMP_CONTROL(int control, void* ptr, size_t size);
+
+//reduction
+#define REOMP_CONTROL_REDUCTION reomp_control_reduction
+#define REOMP_CONTROL_REDUCTION_STR xstr(REOMP_CONTROL_REDUCTION)
+void REOMP_CONTROL_REDUCTION(int control, void* ptr, size_t size);
 
 /* #define REOMP_RR_INIT     (0) */
 /* #define REOMP_RR_FINALIZE (1) */
@@ -92,3 +97,4 @@ char* reomp_get_rr_type_str(int rr_type);
 
 
 #endif
+

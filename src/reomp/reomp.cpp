@@ -105,6 +105,9 @@ static void reomp_gate_other(int control, void* ptr, size_t size)
 
 void REOMP_CONTROL(int control, void* ptr, size_t size)
 {
+/*    if(NULL == reomp_gate){
+       MUTIL_PRT("Error:reomp_gate is null!!!");
+    }*/ 
   if (reomp_config.mode == REOMP_ENV_MODE_DISABLE) return;
   if (control == REOMP_GATE_IN || control == REOMP_BEF_CRITICAL_BEGIN || control == REOMP_BEF_REDUCE_BEGIN) {
     REOMP_PROFILE(reomp_profile((size_t)ptr, size));
@@ -116,12 +119,15 @@ void REOMP_CONTROL(int control, void* ptr, size_t size)
 
   switch(control) {
   case REOMP_BEF_MAIN: // 0
+    //MUTIL_PRT("Enter REOMP_BEF_MAIN.");
     reomp_init(control, size);
     break;
   case REOMP_AFT_MAIN: // 1
+    //MUTIL_PRT("Enter REOMP_AFT_MAIN.");
     reomp_finalize();
     break;
   case REOMP_AFT_MPI_INIT: // 2
+    //MUTIL_PRT("Enter REOMP_AFT_MPI_INIT.");
     int flag;
     int my_rank;
     if (reomp_config.method == REOMP_ENV_METHOD_TID)reomp_gate->init(control, size);
@@ -135,43 +141,134 @@ void REOMP_CONTROL(int control, void* ptr, size_t size)
     break;
     
   case REOMP_GATE_IN: // 10
+    //MUTIL_PRT("@@@@@@@Enter REOMP_GATE_IN.");
+   // MUTIL_PRT("@@@@@@@Enter REOMP_GATE_IN--> size:%d.",size);
     reomp_gate->in(control, ptr, size, REOMP_WITH_LOCK);
     break;
   case REOMP_GATE_OUT: // 11
+    //MUTIL_PRT("@@@@@@Enter REOMP_GATE_OUT.");
     reomp_gate->out(control, ptr, size, REOMP_WITH_LOCK);
     break;
   case REOMP_GATE: // 12
+    //MUTIL_PRT("Enter REOMP_GATE.");
     break;
     
   case REOMP_BEF_CRITICAL_BEGIN: // 13
+    //MUTIL_PRT("Enter REOMP_BEF_CRITICAL_BEGIN.");
+    //MUTIL_PRT("bcb control = %d",control);
+    //if(NULL == ptr){MUTIL_PRT("ptr is null");}
     reomp_gate->in(control, ptr, size, REOMP_WITHOUT_LOCK);
     break;
   case REOMP_AFT_CRITICAL_BEGIN: // 14
+    //MUTIL_PRT("Enter REOMP_AFT_CRITICAL_BEGIN.");
     break;
   case REOMP_AFT_CRITICAL_END: // 15
+    //MUTIL_PRT("Enter REOMP_AFT_CRITICAL_END.");
     reomp_gate->out(control, ptr, size, REOMP_WITHOUT_LOCK);
     break;
     
   case REOMP_BEF_REDUCE_BEGIN: // 16
+    //MUTIL_PRT("Enter REOMP_BEF_REDUCE_BEGIN.");
+    //MUTIL_PRT("brb control = %d",control);
+    //if(NULL == ptr){MUTIL_PRT("ptr is null");}
+    //if(NULL == size){MUTIL_PRT("size is null");}
     reomp_gate->in_brb(control, ptr, size);
     break;
   case REOMP_AFT_REDUCE_BEGIN: // 17
+    //MUTIL_PRT("Enter REOMP_AFT_REDUCE_BEGIN.");
     reomp_gate->in_arb(control, ptr, size);
     break;
   case REOMP_BEF_REDUCE_END:   // 18
+    //MUTIL_PRT("Enter REOMP_BEF_REDUCE_END.");
     reomp_gate->out_bre(control, ptr, size);
     break;
   case REOMP_AFT_REDUCE_END:   // 19
+    //MUTIL_PRT("Enter REOMP_AFT_REDUCE_END.");
     reomp_gate->out_are(control, ptr, size);
     break;
   case REOMP_OTHER:
+    //MUTIL_PRT("Enter REOMP_OTHER.");
     reomp_gate_other(control, ptr, size);
     break;
   default:
+    //MUTIL_PRT("Enter default.");
     MUTIL_ERR("No such control: %d", control);
   }
   return;
 }
+//reductio
+/*
+void REOMP_CONTROL_REDUCTION(int control, void* ptr, size_t size)
+{
+    if (reomp_config.mode == REOMP_ENV_MODE_DISABLE) return;
+    if (control == REOMP_GATE_IN || control == REOMP_BEF_CRITICAL_BEGIN || control == REOMP_BEF_REDUCE_BEGIN) {
+        REOMP_PROFILE(reomp_profile((size_t)ptr, size));
+    }
+    if (control == REOMP_GATE_IN || control == REOMP_GATE_OUT) {
+        if (!reomp_config.multi_clock) size = 0;
+    }
+
+
+    switch (control) {
+    case REOMP_BEF_MAIN: // 0
+        reomp_init(control, size);
+        break;
+    case REOMP_AFT_MAIN: // 1
+        reomp_finalize();
+        break;
+    case REOMP_AFT_MPI_INIT: // 2
+        int flag;
+        int my_rank;
+        if (reomp_config.method == REOMP_ENV_METHOD_TID)reomp_gate->init(control, size);
+        MPI_Initialized(&flag);
+        if (flag) {
+            MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+        }
+        else {
+            MUTIL_ERR("MPI is not initialized yet");
+        }
+        reomp_util_init(my_rank);
+        break;
+
+    case REOMP_GATE_IN: // 10
+        reomp_gate->in(control, ptr, size, REOMP_WITH_LOCK);
+        break;
+    case REOMP_GATE_OUT: // 11
+        reomp_gate->out(control, ptr, size, REOMP_WITH_LOCK);
+        break;
+    case REOMP_GATE: // 12
+        break;
+
+    case REOMP_BEF_CRITICAL_BEGIN: // 13
+        reomp_gate->in(control, ptr, size, REOMP_WITHOUT_LOCK);
+        break;
+    case REOMP_AFT_CRITICAL_BEGIN: // 14
+        break;
+    case REOMP_AFT_CRITICAL_END: // 15
+        reomp_gate->out(control, ptr, size, REOMP_WITHOUT_LOCK);
+        break;
+
+    case REOMP_BEF_REDUCE_BEGIN: // 16
+        reomp_gate->in_brb(control, ptr, size);
+        break;
+    case REOMP_AFT_REDUCE_BEGIN: // 17
+        reomp_gate->in_arb(control, ptr, size);
+        break;
+    case REOMP_BEF_REDUCE_END:   // 18
+        reomp_gate->out_bre(control, ptr, size);
+        break;
+    case REOMP_AFT_REDUCE_END:   // 19
+        reomp_gate->out_are(control, ptr, size);
+        break;
+    case REOMP_OTHER:
+        reomp_gate_other(control, ptr, size);
+        break;
+    default:
+        MUTIL_ERR("No such control: %d", control);
+    }
+    return;
+}
+*/
 
 
 
